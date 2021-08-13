@@ -16,12 +16,11 @@ class Sim800
         bool sortResponse(String resp);
         bool sendCommand(String cmd);
 
+
         struct RESPONSE{
             String raw;
-            String line0;
-            String line1;
-            String line2;
-            String line3;
+            String lines[10];
+            int size;
         };
 
         struct STATUS{

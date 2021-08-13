@@ -1,7 +1,7 @@
 #include "sim800.h"
 
 
-Sim800::Sim800(int baud, int ssRx, int ssTx):sim800Port(ssRx,ssTx);baud(baud){
+Sim800::Sim800(int baud, int ssRx, int ssTx):sim800Port(ssRx,ssTx){
     
     return;
 }
@@ -9,36 +9,34 @@ Sim800::Sim800(int baud, int ssRx, int ssTx):sim800Port(ssRx,ssTx);baud(baud){
 bool Sim800::activatePort(){
     sim800Port.begin(9600);
     delay(1000);
+    status.portActive = true;
 }
 
+
+bool Sim800::deActivatePort(){
+    sim800Port.end();
+    delay(1000);
+    status.portActive = false;
+}
+
+/*
+    Populate RESPONSE response
+*/
 bool Sim800::sortResponse(String resp){
 
     short lineCounter = 0;
-    response.raw="";
-    response.line0="";
-    response.line1="";
-    response.line2="";
-    response.line3="";
-
+    for(int i =0; i < sizeof(response.lines)/sizeof(String); i++){
+        response.lines[i] = "";
+    }
     for(int i = 0; i < resp.length(); i++){
-
-        if(lineCounter == 0)
-            response.line0 += resp[i];
-        if(lineCounter == 1)
-            response.line1 += resp[i];
-        if(lineCounter == 2)
-            response.line2 += resp[i];
-        if(lineCounter == 3)
-            response.line3 += resp[i];
-
+        if(resp[i]!='\n' && resp[i]!='\r')
+            response.lines[lineCounter] += resp[i];
         if(resp[i]=='\n'){
             lineCounter ++;
         } 
-
     }
     response.raw = resp;
-
-
+    response.size = lineCounter;
 }
 
 /*

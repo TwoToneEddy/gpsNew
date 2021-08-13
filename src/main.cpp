@@ -12,10 +12,11 @@ void setup(){
   while(!gsm.sendCommand("AT\r\n")){
 
   }
-  Serial.print("Line0 = ");Serial.println(gsm.response.line0);
-  Serial.print("Line1 = ");Serial.println(gsm.response.line1);
-  Serial.print("Line2 = ");Serial.println(gsm.response.line2);
-  Serial.print("Line3 = ");Serial.println(gsm.response.line3);
+
+  for(int i =0; i < gsm.response.size; i++){
+    Serial.print(i);Serial.println(gsm.response.lines[i]);
+  }
+
 
 }
 
