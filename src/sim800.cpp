@@ -1,20 +1,38 @@
 #include "sim800.h"
 
 
-Sim800::Sim800(int baud, int ssRx, int ssTx):sim800Port(ssRx,ssTx){
-    
+Sim800::Sim800(int baud, Stream &debugPort,HardwareSerial &hardwareSerial):hwSerial(true){
+    this->sim800Port = &hardwareSerial;
+    this->debugPort = &debugPort;
+    this->baud = baud;
+    return;
+}
+
+Sim800::Sim800(int baud,Stream &debugPort,SoftwareSerial &softwareSerial):hwSerial(false){
+    this->sim800Port = &softwareSerial;
+    this->debugPort = &debugPort;
+    this->baud = baud;
     return;
 }
 
 bool Sim800::activatePort(){
-    sim800Port.begin(9600);
+
+    if(hwSerial){
+        static_cast<HardwareSerial*>(sim800Port)->begin(baud);
+    }else{
+        static_cast<SoftwareSerial*>(sim800Port)->begin(baud);
+    }
     delay(1000);
     status.portActive = true;
 }
 
 
 bool Sim800::deActivatePort(){
-    sim800Port.end();
+    if(hwSerial){
+        static_cast<HardwareSerial*>(sim800Port)->end();
+    }else{
+        static_cast<SoftwareSerial*>(sim800Port)->end();
+    }
     delay(1000);
     status.portActive = false;
 }
@@ -47,14 +65,14 @@ bool Sim800::sendCommand(String cmd){
     String trash;
     String resp = "";
 
-    if(sim800Port.available())
-        trash = sim800Port.readString();
+    if(sim800Port->available())
+        trash = sim800Port->readString();
 
-    sim800Port.print(cmd);
-    Serial.println("Trying command");
+    sim800Port->print(cmd);
+    this->debugPort->println("Trying command");
     delay(SIM800_RESPONSE_DELAY);
 
-    resp = sim800Port.readString();
+    resp = sim800Port->readString();
     
     if(resp.indexOf("OK") != -1){
         sortResponse(resp);
@@ -67,5 +85,5 @@ bool Sim800::sendCommand(String cmd){
 }
 
 bool Sim800::configureSim800(){
-    Serial.println("configureSim800()");
+    this->debugPort->println("configureSim800()");
 }

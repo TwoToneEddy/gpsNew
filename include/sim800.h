@@ -8,8 +8,10 @@
 class Sim800
 {
     public:
-        Sim800(int baud, int ssRx, int ssTx);
-        SoftwareSerial sim800Port;
+        Sim800(int baud, Stream &debugPort, SoftwareSerial &softwareSerial);
+        Sim800(int baud, Stream &debugPort, HardwareSerial &hardwareSerial);
+        Stream *sim800Port;
+        Stream *debugPort;
         bool activatePort();
         bool deActivatePort();
         bool configureSim800();
@@ -32,6 +34,8 @@ class Sim800
 
         RESPONSE response;
         STATUS status;
+        int baud;
+        bool hwSerial;
 };
 
 #endif
