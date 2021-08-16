@@ -3,13 +3,25 @@
 #include <Arduino.h>
 #include <SoftwareSerial.h>
 
-#define SIM800_RESPONSE_DELAY 800
+#define SIM800_PORT_ACTIVATION_DELAY 500
+#define SIM800_RESPONSE_DELAY 500
+#define DEBUG_GSM
+
+
+#define AUTO_BAUD_CMD       "AT\r\n"
+#define TEXT_MODE_CMD       "AT+CMGF=1\r\n"
+#define WAKE_CMD            "AT+CSCLK=0\r\n"
+#define DELETE_MSGS_CMD     "AT+CMGD=2,4\r\n"
+#define CHECK_BATTERY_CMD   "AT+CBC\r\n"
+
+#define MESSAGE_ATTEMPT_LIMIT   10
+#define NO_RESPONSE_ERROR   1
+
 
 class Sim800
 {
     public:
-        Sim800(int baud, Stream &debugPort, SoftwareSerial &softwareSerial);
-        Sim800(int baud, Stream &debugPort, HardwareSerial &hardwareSerial);
+        Sim800(int baud, Stream &debugPort, Stream &sim800Port, bool hwSerial);
         Stream *sim800Port;
         Stream *debugPort;
         bool activatePort();
@@ -17,6 +29,8 @@ class Sim800
         bool configureSim800();
         bool sortResponse(String resp);
         bool sendCommand(String cmd);
+        void debugResponse();
+        bool sim800Task();
 
 
         struct RESPONSE{
@@ -29,6 +43,7 @@ class Sim800
             bool portActive;
             bool error;
             short errorCode;
+            short messageAttempts;
         };
 
 

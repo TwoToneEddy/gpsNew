@@ -2,44 +2,39 @@
 #include <SoftwareSerial.h>
 #include "sim800.h"
 
-#define DEBUG_PORT_HW
-//#define DEBUG_PORT_SW
+#define GSM_BAUD 9600
+#define DEBUG_BAUD 9600
 
-SoftwareSerial gsmPort = SoftwareSerial(6,7);
 
-#ifdef DEBUG_PORT_HW
+// GSM Serial, debug SoftwareSerial
+//#define GSM_PORT_HW
+
+
+#ifdef GSM_PORT_HW
+SoftwareSerial ss = SoftwareSerial(6,7);
+Stream *debugPort = &ss;
+Stream *gsmPort = &Serial;
+Sim800 gsm = Sim800(GSM_BAUD,*debugPort,*gsmPort,true);
+#else
+SoftwareSerial ss = SoftwareSerial(6,7);
+Stream *gsmPort = &ss;
 Stream *debugPort = &Serial;
+Sim800 gsm = Sim800(GSM_BAUD,*debugPort,*gsmPort,false);
 #endif
 
-#ifdef DEBUG_PORT_SW
-SoftwareSerial ssdb = SoftwareSerial(8,9);
-Stream *debugPort = &ssdb;
-#endif
-
-
-
-Sim800 gsm = Sim800(9600,*debugPort,gsmPort);
 
 void setup(){
 
-  #ifdef DEBUG_PORT_HW
-  static_cast<HardwareSerial*>(debugPort)->begin(9600);
+  #ifdef GSM_PORT_HW
+  static_cast<SoftwareSerial*>(debugPort)->begin(DEBUG_BAUD);
   #else
-  static_cast<SoftwareSerial*>(debugPort)->begin(9600);
+  static_cast<HardwareSerial*>(debugPort)->begin(DEBUG_BAUD);
   #endif
 
   debugPort->println("Serial open, configuring sim800");
-  gsm.configureSim800();
+
   gsm.activatePort();
-
-  while(!gsm.sendCommand("AT\r\n")){
-
-  }
-
-  for(int i =0; i < gsm.response.size; i++){
-    debugPort->print(i);debugPort->println(gsm.response.lines[i]);
-  }
-
+  gsm.configureSim800();
 
 }
 
