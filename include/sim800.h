@@ -4,7 +4,7 @@
 #include <SoftwareSerial.h>
 
 #define SIM800_PORT_ACTIVATION_DELAY 500
-#define SIM800_RESPONSE_DELAY 500
+#define SIM800_RESPONSE_DELAY 1000
 #define DEBUG_GSM
 
 
@@ -31,6 +31,10 @@ class Sim800
         bool sendCommand(String cmd);
         void debugResponse();
         bool sim800Task();
+        bool checkForMessage();
+        int getMostRecentMSGIndex(String rxString);
+        bool processMessage(int index);
+        void flush();
 
 
         struct RESPONSE{
@@ -46,10 +50,15 @@ class Sim800
             short messageAttempts;
         };
 
+        struct MSG_CONTENTS{
+            String senderNumber;
+            String message;
+        };
 
         RESPONSE response;
         STATUS status;
-        int baud;
+        MSG_CONTENTS message;
+        int baud,newestMsgIndex;
         bool hwSerial;
 };
 
