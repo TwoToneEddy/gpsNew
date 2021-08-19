@@ -24,6 +24,13 @@ Sim800 gsm = Sim800(GSM_BAUD,*debugPort,*gsmPort,false);
 
 bool GSMPassthrough;
 
+void checkSim800Status(){
+  if(gsm.status.error){
+    //Do something if error
+  }
+}
+
+
 void setup(){
 
   #ifdef GSM_PORT_HW
@@ -53,6 +60,7 @@ void loop(){
   
   gsm.checkForMessage();
   gsm.sim800Task();
+  checkSim800Status();
   delay(1000);
   
 }

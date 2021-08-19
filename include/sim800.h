@@ -15,7 +15,14 @@
 #define CHECK_BATTERY_CMD   "AT+CBC\r\n"
 
 #define MESSAGE_ATTEMPT_LIMIT   10
-#define NO_RESPONSE_ERROR   1
+#define COMMUNICATION_TIMEOUT   10 // In units of 100ms
+
+#define INVALID_RESPONSE_ERROR   0x01
+#define NO_RESPONSE_ERROR        0x02
+
+#define SEND_COMMAND_SUCCESS        0
+#define SEND_COMMAND_FAIL           1 
+#define SEND_COMMAND_FAIL_CANCEL    2    
 
 
 class Sim800
@@ -28,7 +35,8 @@ class Sim800
         bool deActivatePort();
         bool configureSim800();
         bool sortResponse(String resp);
-        bool sendCommand(String cmd);
+        void setError(short errorCode);
+        short sendCommand(String cmd);
         void debugResponse();
         bool sim800Task();
         bool checkForMessage();
@@ -54,6 +62,7 @@ class Sim800
             String senderNumber;
             String message;
         };
+
 
         RESPONSE response;
         STATUS status;

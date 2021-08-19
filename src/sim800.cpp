@@ -12,6 +12,14 @@ Sim800::Sim800(int baud, Stream &debugPort,Stream &sim800Port, bool hwSerial){
     return;
 }
 
+/*
+    Tasks to do every tick. To be called by main routine every loop
+*/
+bool Sim800::sim800Task(){
+
+
+
+}
 
 void Sim800::flush(){
     String trash = "";
@@ -21,6 +29,11 @@ void Sim800::flush(){
         this->debugPort->print("Clearing from buffer: ");this->debugPort->println(trash);
         #endif
     }
+}
+
+void Sim800::setError(short errorCode){
+    status.error = true;
+    status.errorCode |= errorCode;
 }
 
 void Sim800::debugResponse(){
@@ -82,9 +95,9 @@ bool Sim800::sortResponse(String resp){
     Send command and return true if "OK" was part of the response
     Populate RESPONSE
 */
-bool Sim800::sendCommand(String cmd){
+short Sim800::sendCommand(String cmd){
     String resp = "";
-
+    int portTimeoutCounter = 0;
     flush();
 
     sim800Port->print(cmd);
@@ -94,7 +107,17 @@ bool Sim800::sendCommand(String cmd){
     #endif
 
     //delay(SIM800_RESPONSE_DELAY);
-    while(!sim800Port->available());
+    while(!sim800Port->available()){
+        if(portTimeoutCounter >= COMMUNICATION_TIMEOUT){
+            setError(NO_RESPONSE_ERROR);
+            return SEND_COMMAND_FAIL_CANCEL;
+        }
+        delay(100);
+        portTimeoutCounter++;
+    }
+
+    portTimeoutCounter = 0;
+
     resp += sim800Port->readString();
 
     #ifdef DEBUG_GSM
@@ -104,10 +127,15 @@ bool Sim800::sendCommand(String cmd){
     if(resp.indexOf("OK") != -1){
         sortResponse(resp);
         this->status.messageAttempts = 0;
-        return true;
+        return SEND_COMMAND_SUCCESS;
     }else{
+
+        if(this->status.messageAttempts >= MESSAGE_ATTEMPT_LIMIT){
+            setError(INVALID_RESPONSE_ERROR);
+            return SEND_COMMAND_FAIL_CANCEL;
+        }
         this->status.messageAttempts++;
-        return false;
+        return SEND_COMMAND_FAIL;
     }
 
 
@@ -115,15 +143,15 @@ bool Sim800::sendCommand(String cmd){
 
 bool Sim800::configureSim800(){
     this->debugPort->println("configureSim800()");
-    while(!sendCommand(AUTO_BAUD_CMD));
+    while(sendCommand(AUTO_BAUD_CMD) == SEND_COMMAND_FAIL);
     debugResponse();
-    while(!sendCommand(TEXT_MODE_CMD));
+    while(sendCommand(TEXT_MODE_CMD)== SEND_COMMAND_FAIL);
     debugResponse();
-    while(!sendCommand(WAKE_CMD));
+    while(sendCommand(WAKE_CMD)== SEND_COMMAND_FAIL);
     debugResponse();
-    while(!sendCommand(DELETE_MSGS_CMD));
+    while(sendCommand(DELETE_MSGS_CMD)== SEND_COMMAND_FAIL);
     debugResponse();
-    while(!sendCommand(CHECK_BATTERY_CMD));
+    while(sendCommand(CHECK_BATTERY_CMD)== SEND_COMMAND_FAIL);
     debugResponse();
 }
 
@@ -143,7 +171,9 @@ int Sim800::getMostRecentMSGIndex(String rxString){
 
 }
 
-
+/*
+    Reads message at index, populates MSG_CONTENTS message
+*/
 bool Sim800::processMessage(int index){
 
     char cmd[24];
@@ -159,7 +189,7 @@ bool Sim800::processMessage(int index){
     message.senderNumber = "";
 
     sprintf(cmd,"AT+CMGR=%d\r\n",index);
-    while(!sendCommand(cmd));
+    while(sendCommand(cmd) == SEND_COMMAND_FAIL);
     debugResponse();
 
     while(response.lines[1][i] != '+' || response.lines[1][i+1] != '4')
@@ -183,6 +213,10 @@ bool Sim800::processMessage(int index){
 
 }
 
+/*
+    Checks for indication of message in serial buffer. Calls processMessage which populates
+    MSG_CONTENTS message. Returns true if a message has been found. Deletes message after processing
+*/
 bool Sim800::checkForMessage(){
     String buffer = "";
     if(this->sim800Port->available()){
@@ -201,6 +235,9 @@ bool Sim800::checkForMessage(){
 
             processMessage(newestMsgIndex);
 
+            while(sendCommand(DELETE_MSGS_CMD) == SEND_COMMAND_FAIL);
+            debugResponse();
+
             return true;
         }else{
             flush();
@@ -210,14 +247,4 @@ bool Sim800::checkForMessage(){
     return false;
 }
 
-/*
-    Tasks to do every tick. To be called by main routine every loop
-*/
-bool Sim800::sim800Task(){
 
-    if(this->status.messageAttempts >= MESSAGE_ATTEMPT_LIMIT){
-        this->status.errorCode = 1;
-        this->status.error = true;
-    }
-
-}
