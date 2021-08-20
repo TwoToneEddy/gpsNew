@@ -38,7 +38,7 @@ class Sim800
         bool configureSim800();
         bool sortResponse(String resp);
         void setError(short errorCode);
-        short sendCommand(String cmd);
+        short sendCommand(char* cmd);
         void debugResponse();
         bool sim800Task();
         bool checkForMessage();

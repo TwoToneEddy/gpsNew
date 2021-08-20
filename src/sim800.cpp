@@ -103,7 +103,7 @@ bool Sim800::sortResponse(String resp){
     Send command and return true if "OK" was part of the response
     Populate RESPONSE
 */
-short Sim800::sendCommand(String cmd){
+short Sim800::sendCommand(char* cmd){
     String resp = "";
     int portTimeoutCounter = 0;
     flush();
@@ -185,7 +185,7 @@ int Sim800::getMostRecentMSGIndex(String rxString){
 */
 bool Sim800::processMessage(int index){
 
-    char cmd[24];
+    char cmd[24]="";
     int i = 0;
     int lineCounter = 0;
     int numberStart = 0;
