@@ -14,8 +14,10 @@
 #define DELETE_MSGS_CMD     "AT+CMGD=2,4\r\n"
 #define CHECK_BATTERY_CMD   "AT+CBC\r\n"
 
+#define DEFAULT_RECIPIENT      "+447747465192"
+
 #define MESSAGE_ATTEMPT_LIMIT   10
-#define COMMUNICATION_TIMEOUT   10 // In units of 100ms
+#define COMMUNICATION_TIMEOUT   50 // In units of 100ms
 
 #define INVALID_RESPONSE_ERROR   0x01
 #define NO_RESPONSE_ERROR        0x02

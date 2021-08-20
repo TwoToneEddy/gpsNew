@@ -18,6 +18,11 @@ Sim800::Sim800(int baud, Stream &debugPort,Stream &sim800Port, bool hwSerial){
 bool Sim800::sim800Task(){
 
 
+    #ifdef DEBUG_GSM
+    this->debugPort->println("sim800Task()");
+    #endif
+
+    sim800Port->flush();
 
 }
 
@@ -32,6 +37,9 @@ void Sim800::flush(){
 }
 
 void Sim800::setError(short errorCode){
+    #ifdef DEBUG_GSM
+    this->debugPort->print("ERROR:");this->debugPort->println(errorCode);
+    #endif
     status.error = true;
     status.errorCode |= errorCode;
 }
@@ -108,12 +116,13 @@ short Sim800::sendCommand(String cmd){
 
     //delay(SIM800_RESPONSE_DELAY);
     while(!sim800Port->available()){
+        /*
         if(portTimeoutCounter >= COMMUNICATION_TIMEOUT){
             setError(NO_RESPONSE_ERROR);
             return SEND_COMMAND_FAIL_CANCEL;
         }
         delay(100);
-        portTimeoutCounter++;
+        portTimeoutCounter++;*/
     }
 
     portTimeoutCounter = 0;
@@ -194,6 +203,7 @@ bool Sim800::processMessage(int index){
 
     while(response.lines[1][i] != '+' || response.lines[1][i+1] != '4')
         i++;
+
     numberStart = i;
 
     // Find end of number by looking for ,
@@ -204,10 +214,18 @@ bool Sim800::processMessage(int index){
     for(i = numberStart; i < numberEnd; i++)
         message.senderNumber+=response.lines[1][i];
 
+    if(message.senderNumber.length()!=13){
+        #ifdef DEBUG_GSM
+        this->debugPort->print("Invalid recipient, default used");
+        #endif
+        message.senderNumber = DEFAULT_RECIPIENT;
+    }
+
     message.message = response.lines[2];
 
     #ifdef DEBUG_GSM
     this->debugPort->print("SMS sender :");this->debugPort->println(message.senderNumber);
+    this->debugPort->print("Number Length :");this->debugPort->println(message.senderNumber.length());
     this->debugPort->print("Message :");this->debugPort->println(message.message);
     #endif
 
@@ -235,9 +253,14 @@ bool Sim800::checkForMessage(){
 
             processMessage(newestMsgIndex);
 
+            /*
             while(sendCommand(DELETE_MSGS_CMD) == SEND_COMMAND_FAIL);
             debugResponse();
-
+            */
+            #ifdef DEBUG_GSM
+            this->debugPort->println("processMessage() complete!");
+            #endif
+           
             return true;
         }else{
             flush();

@@ -6,6 +6,7 @@
 #define DEBUG_BAUD 9600
 
 
+#define DEBUG_LOOP
 // GSM Serial, debug SoftwareSerial
 //#define GSM_PORT_HW
 
@@ -41,9 +42,10 @@ void setup(){
 
   debugPort->println("Serial open, configuring sim800");
 
-  gsm.activatePort();
-  gsm.configureSim800();
   GSMPassthrough = false;
+  gsm.activatePort();
+  if(!GSMPassthrough)
+    gsm.configureSim800();
 }
 
 void loop(){
@@ -63,4 +65,8 @@ void loop(){
   checkSim800Status();
   delay(1000);
   
+  #ifdef DEBUG_LOOP
+  debugPort->println("Running loop() ");
+  debugPort->flush();
+  #endif
 }
