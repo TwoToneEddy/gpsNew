@@ -1,5 +1,6 @@
 #include "sim800.h"
 
+#define BUZZER_PIN  10
 
 Sim800::Sim800(int baud, Stream &debugPort,Stream &sim800Port, bool hwSerial){
     this->sim800Port = &sim800Port;
@@ -108,22 +109,40 @@ short Sim800::sendCommand(char* cmd){
     int portTimeoutCounter = 0;
     flush();
 
-    sim800Port->print(cmd);
+
+    while(!sim800Port->available()){
+        sim800Port->print(cmd);
+        delay(200);
+    }
 
     #ifdef DEBUG_GSM
     this->debugPort->print("Trying command: ");this->debugPort->println(cmd);
     #endif
 
+    tone(BUZZER_PIN, 880, 50);
+    delay(100);
+    tone(BUZZER_PIN, 880, 50);
+    delay(100);
     //delay(SIM800_RESPONSE_DELAY);
+    
+    /*
     while(!sim800Port->available()){
-        /*
+        
         if(portTimeoutCounter >= COMMUNICATION_TIMEOUT){
             setError(NO_RESPONSE_ERROR);
             return SEND_COMMAND_FAIL_CANCEL;
         }
         delay(100);
-        portTimeoutCounter++;*/
-    }
+        portTimeoutCounter++;
+    }*/
+
+
+    tone(BUZZER_PIN, 880, 50);
+    delay(100);
+    tone(BUZZER_PIN, 880, 50);
+    delay(100);
+    tone(BUZZER_PIN, 880, 50);
+    delay(100);
 
     portTimeoutCounter = 0;
 
@@ -152,8 +171,10 @@ short Sim800::sendCommand(char* cmd){
 
 bool Sim800::configureSim800(){
     this->debugPort->println("configureSim800()");
+    tone(BUZZER_PIN, 440, 50);
     while(sendCommand(AUTO_BAUD_CMD) == SEND_COMMAND_FAIL);
     debugResponse();
+    tone(BUZZER_PIN, 440, 50);
     while(sendCommand(TEXT_MODE_CMD)== SEND_COMMAND_FAIL);
     debugResponse();
     while(sendCommand(WAKE_CMD)== SEND_COMMAND_FAIL);

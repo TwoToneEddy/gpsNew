@@ -4,6 +4,7 @@
 
 #define GSM_BAUD 9600
 #define DEBUG_BAUD 9600
+#define BUZZER_PIN  10
 
 
 #define DEBUG_LOOP
@@ -43,9 +44,15 @@ void setup(){
   debugPort->println("Serial open, configuring sim800");
 
   GSMPassthrough = false;
+  tone(BUZZER_PIN, 440, 50);
+  delay(5000);
   gsm.activatePort();
-  if(!GSMPassthrough)
+  tone(BUZZER_PIN, 440, 50);
+  delay(1000);
+  if(!GSMPassthrough){
     gsm.configureSim800();
+    tone(BUZZER_PIN, 880, 50);
+  }
 }
 
 void loop(){
