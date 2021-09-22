@@ -1,79 +1,60 @@
 #include <Arduino.h>
-#include <SoftwareSerial.h>
-#include "sim800.h"
+#include <Sim800L.h>
+#include <SoftwareSerial.h>   
 
-#define GSM_BAUD 9600
-#define DEBUG_BAUD 9600
-#define BUZZER_PIN  10
+#define RX  6
+#define TX  7
 
+Sim800L GSM(RX, TX,10);
 
-#define DEBUG_LOOP
-// GSM Serial, debug SoftwareSerial
-//#define GSM_PORT_HW
+/*
+ * In alternative:
+ * Sim800L GSM;                       // Use default pinout
+ * Sim800L GSM(RX, TX, RESET);        
+ * Sim800L GSM(RX, TX, RESET, LED);
+ */
 
-
-#ifdef GSM_PORT_HW
-SoftwareSerial ss = SoftwareSerial(6,7);
-Stream *debugPort = &ss;
-Stream *gsmPort = &Serial;
-Sim800 gsm = Sim800(GSM_BAUD,*debugPort,*gsmPort,true);
-#else
-SoftwareSerial ss = SoftwareSerial(6,7);
-Stream *gsmPort = &ss;
-Stream *debugPort = &Serial;
-Sim800 gsm = Sim800(GSM_BAUD,*debugPort,*gsmPort,false);
-#endif
-
-bool GSMPassthrough;
-
-void checkSim800Status(){
-  if(gsm.status.error){
-    //Do something if error
-  }
-}
-
+char* text;
+char* number;
+bool error; 					//to catch the response of sendSms
+String message;
+//SoftwareSerial test(RX,TX);
 
 void setup(){
-
-  #ifdef GSM_PORT_HW
-  static_cast<SoftwareSerial*>(debugPort)->begin(DEBUG_BAUD);
-  #else
-  static_cast<HardwareSerial*>(debugPort)->begin(DEBUG_BAUD);
-  #endif
-
-  debugPort->println("Serial open, configuring sim800");
-
-  GSMPassthrough = false;
-  tone(BUZZER_PIN, 440, 50);
-  delay(5000);
-  gsm.activatePort();
-  tone(BUZZER_PIN, 440, 50);
-  delay(1000);
-  if(!GSMPassthrough){
-    gsm.configureSim800();
-    tone(BUZZER_PIN, 880, 50);
+  Serial.begin(9600);
+  //test.begin(9600);
+	GSM.begin(9600); 			
+	
+  GSM.delAllSms(); // this is optional
+  while(!GSM.prepareForSmsReceive())
+  {
+    delay(1000);
   }
+  Serial.println("Setup complete, Ready..");
+
 }
 
-void loop(){
+void loop(){ 
 
-  while(GSMPassthrough){
-    if (debugPort->available()) {      // If anything comes in Serial (USB),
-      gsmPort->write(debugPort->read());   // read it and send it out Serial1 (pins 0 & 1)
+  byte index = GSM.checkForSMS();
+  if(index != 0)
+  {
+    message=GSM.readSms(index,false);
+  	Serial.println("Got:");
+    Serial.println(message);
+    Serial.println("From:");
+    Serial.println(GSM.getNumberSms(index));
+    delay(1000);
+    GSM.delAllSms();
+    if(message[0] == 'P'){
+  	  Serial.println("Position Request");
     }
-    if (gsmPort->available()) {     // If anything comes in Serial1 (pins 0 & 1)
-      Serial.write(gsmPort->read());   // read it and send it out Serial (USB)
+    if(message[0] == 'R'){
+  	  Serial.println("Ring Request");
     }
+
   }
 
   
-  gsm.checkForMessage();
-  gsm.sim800Task();
-  checkSim800Status();
-  delay(1000);
-  
-  #ifdef DEBUG_LOOP
-  debugPort->println("Running loop() ");
-  debugPort->flush();
-  #endif
+
 }
