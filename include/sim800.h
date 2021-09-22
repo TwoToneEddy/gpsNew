@@ -11,6 +11,7 @@
 #define AUTO_BAUD_CMD       "AT\r\n"
 #define TEXT_MODE_CMD       "AT+CMGF=1\r\n"
 #define WAKE_CMD            "AT+CSCLK=0\r\n"
+#define SLEEP_CMD            "AT+CSCLK=2\r\n"
 #define DELETE_MSGS_CMD     "AT+CMGD=2,4\r\n"
 #define CHECK_BATTERY_CMD   "AT+CBC\r\n"
 
@@ -44,7 +45,6 @@ class Sim800
         bool checkForMessage();
         int getMostRecentMSGIndex(String rxString);
         bool processMessage(int index);
-        void flush();
 
 
         struct RESPONSE{

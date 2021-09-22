@@ -10,6 +10,7 @@ Sim800::Sim800(int baud, Stream &debugPort,Stream &sim800Port, bool hwSerial){
     this->status.messageAttempts=0;
     this->status.errorCode=0;
     this->status.error=false;
+    this->sim800Port->setTimeout(1000);
     return;
 }
 
@@ -23,18 +24,8 @@ bool Sim800::sim800Task(){
     this->debugPort->println("sim800Task()");
     #endif
 
-    sim800Port->flush();
+    //sim800Port->flush();
 
-}
-
-void Sim800::flush(){
-    String trash = "";
-    if(sim800Port->available()){
-        trash = sim800Port->readString();
-        #ifdef DEBUG_GSM
-        this->debugPort->print("Clearing from buffer: ");this->debugPort->println(trash);
-        #endif
-    }
 }
 
 void Sim800::setError(short errorCode){
@@ -107,46 +98,20 @@ bool Sim800::sortResponse(String resp){
 short Sim800::sendCommand(char* cmd){
     String resp = "";
     int portTimeoutCounter = 0;
-    flush();
+    sim800Port->flush();
 
+    sim800Port->print(cmd);
+    resp += sim800Port->readString();
 
-    while(!sim800Port->available()){
-        sim800Port->print(cmd);
-        delay(200);
-    }
 
     #ifdef DEBUG_GSM
     this->debugPort->print("Trying command: ");this->debugPort->println(cmd);
+    this->debugPort->print("Sizeof response = :");this->debugPort->println(resp.length());
     #endif
 
-    tone(BUZZER_PIN, 880, 50);
-    delay(100);
-    tone(BUZZER_PIN, 880, 50);
-    delay(100);
-    //delay(SIM800_RESPONSE_DELAY);
-    
-    /*
-    while(!sim800Port->available()){
-        
-        if(portTimeoutCounter >= COMMUNICATION_TIMEOUT){
-            setError(NO_RESPONSE_ERROR);
-            return SEND_COMMAND_FAIL_CANCEL;
-        }
-        delay(100);
-        portTimeoutCounter++;
-    }*/
-
-
-    tone(BUZZER_PIN, 880, 50);
-    delay(100);
-    tone(BUZZER_PIN, 880, 50);
-    delay(100);
-    tone(BUZZER_PIN, 880, 50);
-    delay(100);
 
     portTimeoutCounter = 0;
 
-    resp += sim800Port->readString();
 
     #ifdef DEBUG_GSM
     this->debugPort->print("Response: ");this->debugPort->print(resp);
@@ -163,24 +128,31 @@ short Sim800::sendCommand(char* cmd){
             return SEND_COMMAND_FAIL_CANCEL;
         }
         this->status.messageAttempts++;
+        #ifdef DEBUG_GSM
+        this->debugPort->println("SEND_COMMAND_FAIL");
+        #endif
         return SEND_COMMAND_FAIL;
     }
 
+    while(sendCommand(WAKE_CMD)== SEND_COMMAND_FAIL);
+    debugResponse();
 
 }
 
 bool Sim800::configureSim800(){
-    this->debugPort->println("configureSim800()");
     tone(BUZZER_PIN, 440, 50);
-    while(sendCommand(AUTO_BAUD_CMD) == SEND_COMMAND_FAIL);
+    while(sendCommand(AUTO_BAUD_CMD)== SEND_COMMAND_FAIL);
+    debugResponse();
+    while(sendCommand(SLEEP_CMD)== SEND_COMMAND_FAIL);
     debugResponse();
     tone(BUZZER_PIN, 440, 50);
     while(sendCommand(TEXT_MODE_CMD)== SEND_COMMAND_FAIL);
     debugResponse();
-    while(sendCommand(WAKE_CMD)== SEND_COMMAND_FAIL);
+    while(sendCommand("AT+CMGR=1\r\n")== SEND_COMMAND_FAIL);
     debugResponse();
+    /*
     while(sendCommand(DELETE_MSGS_CMD)== SEND_COMMAND_FAIL);
-    debugResponse();
+    debugResponse();*/
     while(sendCommand(CHECK_BATTERY_CMD)== SEND_COMMAND_FAIL);
     debugResponse();
 }
@@ -258,7 +230,10 @@ bool Sim800::processMessage(int index){
 */
 bool Sim800::checkForMessage(){
     String buffer = "";
-    if(this->sim800Port->available()){
+    if(this->sim800Port->available()>3){
+        #ifdef DEBUG_GSM
+        this->debugPort->print("\tcheckForMessage(), sim800Port is available..");this->debugPort->println(this->sim800Port->available());
+        #endif
         buffer = this->sim800Port->readString();
 
         #ifdef DEBUG_GSM
@@ -284,9 +259,13 @@ bool Sim800::checkForMessage(){
            
             return true;
         }else{
-            flush();
+            this->sim800Port->flush();
             return false;
         }
+    }else{
+        this->debugPort->print("\tBefore: ");this->debugPort->println(this->sim800Port->available());
+        this->sim800Port->flush();
+        this->debugPort->print("\tAfter: ");this->debugPort->println(this->sim800Port->available());
     }
     return false;
 }
