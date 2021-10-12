@@ -5,12 +5,14 @@
 
 #define SIM800_PORT_ACTIVATION_DELAY 500
 #define SIM800_RESPONSE_DELAY 1000
+#define TIME_OUT_READ_SERIAL 5000
 #define DEBUG_GSM
 
 
 #define AUTO_BAUD_CMD       "AT\r\n"
 #define TEXT_MODE_CMD       "AT+CMGF=1\r\n"
 #define WAKE_CMD            "AT+CSCLK=0\r\n"
+#define SLEEP_CMD            "AT+CSCLK=2\r\n"
 #define DELETE_MSGS_CMD     "AT+CMGD=2,4\r\n"
 #define CHECK_BATTERY_CMD   "AT+CBC\r\n"
 
@@ -45,6 +47,9 @@ class Sim800
         int getMostRecentMSGIndex(String rxString);
         bool processMessage(int index);
         void flush();
+        short readSMS(uint8_t index);
+        String _readSerial();
+        String _readSerial(uint32_t timeout);
 
 
         struct RESPONSE{

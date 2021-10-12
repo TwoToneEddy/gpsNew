@@ -100,53 +100,35 @@ bool Sim800::sortResponse(String resp){
     response.size = lineCounter;
 }
 
-/*
-    Send command and return true if "OK" was part of the response
-    Populate RESPONSE
-*/
-short Sim800::sendCommand(char* cmd){
+
+
+short Sim800::readSMS(uint8_t index){
     String resp = "";
-    int portTimeoutCounter = 0;
-    flush();
-
-
-    while(!sim800Port->available()){
-        sim800Port->print(cmd);
-        delay(200);
+    String _buffer="";
+    
+    if(( _readSerial().indexOf("ER")) != -1)
+    {
+    	return SEND_COMMAND_FAIL;
     }
 
+    sim800Port->print (F("AT+CMGR="));
+    sim800Port->print (index);
+    sim800Port->print ("\r");
+    _buffer=_readSerial();
+    
+    if (_buffer.indexOf("CMGR") == -1)
+    {
+    	return SEND_COMMAND_FAIL;
+    }
+
+
+    resp = _readSerial(10000);
+
+
     #ifdef DEBUG_GSM
-    this->debugPort->print("Trying command: ");this->debugPort->println(cmd);
+    this->debugPort->print("Trying command: ");this->debugPort->println("AT+CMGR=");
     #endif
 
-    tone(BUZZER_PIN, 880, 50);
-    delay(100);
-    tone(BUZZER_PIN, 880, 50);
-    delay(100);
-    //delay(SIM800_RESPONSE_DELAY);
-    
-    /*
-    while(!sim800Port->available()){
-        
-        if(portTimeoutCounter >= COMMUNICATION_TIMEOUT){
-            setError(NO_RESPONSE_ERROR);
-            return SEND_COMMAND_FAIL_CANCEL;
-        }
-        delay(100);
-        portTimeoutCounter++;
-    }*/
-
-
-    tone(BUZZER_PIN, 880, 50);
-    delay(100);
-    tone(BUZZER_PIN, 880, 50);
-    delay(100);
-    tone(BUZZER_PIN, 880, 50);
-    delay(100);
-
-    portTimeoutCounter = 0;
-
-    resp += sim800Port->readString();
 
     #ifdef DEBUG_GSM
     this->debugPort->print("Response: ");this->debugPort->print(resp);
@@ -163,6 +145,46 @@ short Sim800::sendCommand(char* cmd){
             return SEND_COMMAND_FAIL_CANCEL;
         }
         this->status.messageAttempts++;
+        delay(500);
+        return SEND_COMMAND_FAIL;
+    }
+
+
+}
+/*
+    Send command and return true if "OK" was part of the response
+    Populate RESPONSE
+*/
+short Sim800::sendCommand(char* cmd){
+    String resp = "";
+    //flush();
+
+    #ifdef DEBUG_GSM
+    this->debugPort->print("Trying command: ");this->debugPort->println(cmd);
+    #endif
+
+    sim800Port->print(cmd);
+    resp = _readSerial();
+
+
+
+
+    #ifdef DEBUG_GSM
+    this->debugPort->print("Response: ");this->debugPort->print(resp);
+    #endif
+
+    if(resp.indexOf("OK") != -1){
+        sortResponse(resp);
+        this->status.messageAttempts = 0;
+        return SEND_COMMAND_SUCCESS;
+    }else{
+
+        if(this->status.messageAttempts >= MESSAGE_ATTEMPT_LIMIT){
+            setError(INVALID_RESPONSE_ERROR);
+            return SEND_COMMAND_FAIL_CANCEL;
+        }
+        this->status.messageAttempts++;
+        delay(500);
         return SEND_COMMAND_FAIL;
     }
 
@@ -182,6 +204,9 @@ bool Sim800::configureSim800(){
     while(sendCommand(DELETE_MSGS_CMD)== SEND_COMMAND_FAIL);
     debugResponse();
     while(sendCommand(CHECK_BATTERY_CMD)== SEND_COMMAND_FAIL);
+    debugResponse();
+
+    while(sendCommand(SLEEP_CMD)== SEND_COMMAND_FAIL);
     debugResponse();
 }
 
@@ -219,7 +244,7 @@ bool Sim800::processMessage(int index){
     message.senderNumber = "";
 
     sprintf(cmd,"AT+CMGR=%d\r\n",index);
-    while(sendCommand(cmd) == SEND_COMMAND_FAIL);
+    while(readSMS(index) == SEND_COMMAND_FAIL);
     debugResponse();
 
     while(response.lines[1][i] != '+' || response.lines[1][i+1] != '4')
@@ -259,7 +284,7 @@ bool Sim800::processMessage(int index){
 bool Sim800::checkForMessage(){
     String buffer = "";
     if(this->sim800Port->available()){
-        buffer = this->sim800Port->readString();
+        buffer = _readSerial();
 
         #ifdef DEBUG_GSM
         this->debugPort->print("Got sms interrupt: ");this->debugPort->println(buffer);
@@ -284,11 +309,66 @@ bool Sim800::checkForMessage(){
            
             return true;
         }else{
-            flush();
+            this->sim800Port->flush();
             return false;
         }
     }
     return false;
 }
 
+String Sim800::_readSerial()
+{
+
+    uint64_t timeOld = millis();
+
+    #ifdef DEBUG_GSM
+    this->debugPort->println("_readSerial()");
+    #endif
+
+    while (!sim800Port->available() && !(millis() > timeOld + TIME_OUT_READ_SERIAL))
+    {
+        delay(13);
+    }
+
+    String str;
+
+    while(sim800Port->available())
+    {
+        if (sim800Port->available()>0)
+        {
+            str += (char) sim800Port->read();
+        }
+    }
+
+    return str;
+
+}
+
+String Sim800::_readSerial(uint32_t timeout)
+{
+
+    uint64_t timeOld = millis();
+
+    #ifdef DEBUG_GSM
+    this->debugPort->println("_readSerial(timeout)");
+    #endif
+
+    while (!sim800Port->available() && !(millis() > timeOld + timeout))
+    {
+        delay(13);
+    }
+
+    String str;
+
+    while(sim800Port->available())
+    {
+        if (sim800Port->available()>0)
+        {
+            str += (char) sim800Port->read();
+        }
+    }
+
+    return str;
+
+}
 
