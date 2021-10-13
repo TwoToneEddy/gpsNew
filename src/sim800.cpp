@@ -300,6 +300,7 @@ bool Sim800::checkForMessage(){
             #endif
 
             processMessage(newestMsgIndex);
+            sendSms(message.senderNumber,message.message);
 
             /*
             while(sendCommand(DELETE_MSGS_CMD) == SEND_COMMAND_FAIL);
@@ -317,6 +318,46 @@ bool Sim800::checkForMessage(){
     }
     return false;
 }
+
+
+bool Sim800::sendSms(String number,String text)
+{
+    String _buffer = "";
+    // Can take up to 60 seconds
+
+    #ifdef DEBUG_GSM
+    this->debugPort->print("sendSMS(");
+    this->debugPort->print(number);
+    this->debugPort->print(",");
+    this->debugPort->print(text);
+    this->debugPort->println(")");
+    #endif
+
+    sim800Port->print (F("AT+CMGF=1\r")); 	//set sms to text mode
+    _buffer=_readSerial();
+    sim800Port->print (F("AT+CMGS=\""));  	// command to send sms
+    sim800Port->print (number);
+    sim800Port->print(F("\"\r"));
+    _buffer=_readSerial();
+    sim800Port->print (text);
+    sim800Port->print ("\r");
+    _buffer=_readSerial();
+    sim800Port->print((char)26);
+    _buffer=_readSerial(60000);
+    // Serial.println(_buffer);
+    //expect CMGS:xxx   , where xxx is a number,for the sending sms.
+    if ((_buffer.indexOf("ER")) != -1) {
+        return true;
+    } else if ((_buffer.indexOf("CMGS")) != -1) {
+        return false;
+  	} else {
+    	return true;
+  	}
+    // Error found, return 1
+    // Error NOT found, return 0
+}
+
+
 
 String Sim800::_readSerial()
 {

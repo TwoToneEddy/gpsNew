@@ -48,6 +48,7 @@ class Sim800
         bool processMessage(int index);
         void flush();
         short readSMS(uint8_t index);
+        bool sendSms(String number,String text);
         String _readSerial();
         String _readSerial(uint32_t timeout);
 
