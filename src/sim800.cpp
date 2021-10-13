@@ -206,8 +206,8 @@ bool Sim800::configureSim800(){
     while(sendCommand(CHECK_BATTERY_CMD)== SEND_COMMAND_FAIL);
     debugResponse();
 
-    while(sendCommand(SLEEP_CMD)== SEND_COMMAND_FAIL);
-    debugResponse();
+    //while(sendCommand(SLEEP_CMD)== SEND_COMMAND_FAIL);
+    //debugResponse();
 }
 
 
@@ -291,6 +291,8 @@ bool Sim800::checkForMessage(){
         #endif
 
         if(buffer.startsWith("+CMTI:",2)){
+
+            tone(BUZZER_PIN, 880, 50);
             newestMsgIndex=getMostRecentMSGIndex(buffer);
 
             #ifdef DEBUG_GSM
