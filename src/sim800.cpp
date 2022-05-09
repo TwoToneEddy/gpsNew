@@ -206,8 +206,8 @@ bool Sim800::configureSim800(){
     while(sendCommand(CHECK_BATTERY_CMD)== SEND_COMMAND_FAIL);
     debugResponse();
 
-    //while(sendCommand(SLEEP_CMD)== SEND_COMMAND_FAIL);
-    //debugResponse();
+    while(sendCommand(SLEEP_CMD)== SEND_COMMAND_FAIL);
+    debugResponse();
 }
 
 
@@ -300,12 +300,13 @@ bool Sim800::checkForMessage(){
             #endif
 
             processMessage(newestMsgIndex);
-            sendSms(message.senderNumber,message.message);
+            if(message.message[0] == '^')
+                sendSms(message.senderNumber,message.message);
 
-            /*
+            
             while(sendCommand(DELETE_MSGS_CMD) == SEND_COMMAND_FAIL);
             debugResponse();
-            */
+            
             #ifdef DEBUG_GSM
             this->debugPort->println("processMessage() complete!");
             #endif
